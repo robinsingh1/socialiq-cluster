@@ -41,7 +41,7 @@ while ssdb.qsize("ig-queue"):
     f.close()
 
     try:
-        bashCommand = "cat links.txt | parallel --gnu -j200 wget –q -E"
+        bashCommand = "cat links.txt | parallel --gnu -j200 wget -q -E"
         output = subprocess.check_output(['bash','-c', bashCommand])
     except Exception as e:
         print e
