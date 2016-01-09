@@ -32,7 +32,7 @@ onlyfiles = [i for i in onlyfiles if "html" in i]
 
 class Instagram:
     def _profile(self, body):
-        bs = BeautifulSoup(body,"lxml")
+        bs = BeautifulSoup(body,"html.parser")
 
         #lol = bs.find_all("script")[-4].text[21:]
         lol = bs.find_all("script")[-5].text[21:]
