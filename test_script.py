@@ -11,25 +11,6 @@ import json
 import subprocess
 ssdb = SSDB(host=os.environ['SSDB_HOST'], port=os.environ['SSDB_PORT'])
 
-# pop off queue
-urls = ssdb.qpop("ig-queue",100)
-
-# write to file
-f = open("links.txt", "w")
-f.write("\n".join(map(lambda x: str(x), urls)))
-f.close()
-
-try:
-    bashCommand = "cat links.txt | parallel --gnu -j200 wget -E"
-    output = subprocess.check_output(['bash','-c', bashCommand])
-except Exception as e:
-    print e
-
-
-# parse file
-onlyfiles = [f for f in listdir(".") if isfile(join(".", f))]
-onlyfiles = [i for i in onlyfiles if "html" in i]
-
 class Instagram:
     def _profile(self, body):
         bs = BeautifulSoup(body,"html.parser")
@@ -50,24 +31,49 @@ class Instagram:
         del user["followed_by"]
         return user
 
-results = []
-for i in onlyfiles:
-    print i
+while ssdb.qsize("ig-queue"):
+    # pop off queue
+    urls = ssdb.qpop("ig-queue",1000)
+
+    # write to file
+    f = open("links.txt", "w")
+    f.write("\n".join(map(lambda x: str(x), urls)))
+    f.close()
+
     try:
-        f = open(i)
-        html = f.read()
-        results.append(Instagram()._profile(html))
-        f.close()
+        bashCommand = "cat links.txt | parallel --gnu -j200 wget -E"
+        output = subprocess.check_output(['bash','-c', bashCommand])
     except Exception as e:
         print e
 
-f = open("results.json", "w")
-f.write(json.dumps(results))
-f.close()
+    # parse file
+    onlyfiles = [f for f in listdir(".") if isfile(join(".", f))]
+    onlyfiles = [i for i in onlyfiles if "html" in i]
 
-# upload ssdb
-res = json.loads(open("results.json").read())[:]
-values = dict([[i["username"],i["followers"]] for i in res])
+    results = []
+    for i in onlyfiles:
+        print i
+        try:
+            f = open(i)
+            html = f.read()
+            results.append(Instagram()._profile(html))
+            f.close()
+        except Exception as e:
+            print e
 
-ssdb.multi_zset("instagram-followers", **values)
-ssdb.multi_zset("swarm-instagram-followers", **values)
+    f = open("results.json", "w")
+    f.write(json.dumps(results))
+    f.close()
+
+    # upload ssdb
+    res = json.loads(open("results.json").read())[:]
+    values = dict([[i["username"],i["followers"]] for i in res])
+
+    ssdb.multi_zset("instagram-followers", **values)
+    ssdb.multi_zset("swarm-instagram-followers", **values)
+
+    try:
+        bashCommand = "rm *.html"
+        output = subprocess.check_output(['bash','-c', bashCommand])
+    except Exception as e:
+        print e
