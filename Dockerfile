@@ -4,11 +4,13 @@ RUN apt-get update
 
 RUN apt-get install -y wget parallel
 
+RUN pip install lxml
+
 RUN mkdir /app
 WORKDIR /app
 
 # copy requirements and run pip install
-RUN pip install ssdb beautifulsoup4 lxml
+RUN pip install ssdb beautifulsoup4
 
 # copy the rest of the app
 COPY . /app/
